@@ -7,8 +7,7 @@
 #define CARDCS 4
 #define DREQ 3
 
-static int i;
-Adafruit_VS1053_FilePlayer player =
+static Adafruit_VS1053_FilePlayer player =
 	Adafruit_VS1053_FilePlayer(SHIELD_CS, SHIELD_DCS, DREQ, CARDCS);
 
 void setup() {
@@ -19,10 +18,8 @@ void setup() {
 
 	player.setVolume(60, 60);
 	player.useInterrupt(VS1053_FILEPLAYER_PIN_INT);
-	player.playFullFile("startup.mp3");
+	player.playFullFile((char *)"startup.mp3");
 }
 
 void loop() {
-	i++;
-	Serial.println(i);
 }
