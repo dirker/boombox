@@ -9,7 +9,7 @@
 
 struct mapping_entry {
 	char tag[10];
-	char track[12];
+	char track[13];
 };
 
 struct config {
@@ -45,12 +45,12 @@ static void mapping_read(struct mapping_entry *mapping, File *file, unsigned max
 		if (c != ' ')
 			return;
 
-		for (i = 0; i < sizeof(e.track); i++) {
-			c = file->read();
-			if (c == -1)
+		for (i = 0; i < sizeof(e.track) - 1; i++) {
+			c = file->peek();
+			if (c == '\n' || c == -1)
 				break;
 
-			*track++ = c;
+			*track++ = file->read();
 		}
 
 		/* sanity check track */
@@ -74,13 +74,7 @@ static void config_dump(struct config *c)
 	Serial.println("[*] mappings:");
 	i = 0;
 	while (*map_e->tag != 0) {
-		char buf[32];
-
-		snprintf(buf, sizeof(buf),
-		         "[%d] %.10s -> %.12s",
-		         i, map_e->tag, map_e->track);
-		Serial.println(buf);
-
+		p("[%d] %.10s -> %s", i, map_e->tag, map_e->track);
 		map_e++;
 		i++;
 	}
