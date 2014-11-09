@@ -1,3 +1,5 @@
+#include <stdarg.h>
+
 #include <SPI.h>
 #include <SD.h>
 #include <Adafruit_VS1053.h>
@@ -20,6 +22,29 @@ static struct config config;
 
 static Adafruit_VS1053_FilePlayer player =
 	Adafruit_VS1053_FilePlayer(SHIELD_CS, SHIELD_DCS, DREQ, CARDCS);
+
+static void p(const char *fmt, ...)
+{
+	char buf[64];
+	va_list args;
+
+	va_start(args, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	Serial.println(buf);
+}
+
+static void hexdump(const void *p, size_t size)
+{
+	const char *c = (char *)p;
+
+	Serial.println("--- 8< snip ----");
+	for (unsigned i = 0; i < size; i++) {
+		Serial.println(*c++, HEX);
+	}
+	Serial.println("--- >8 snap ----");
+}
 
 static void mapping_read(struct mapping_entry *mapping, File *file, unsigned max_mappings)
 {
