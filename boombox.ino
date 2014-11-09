@@ -4,10 +4,15 @@
 #include <SD.h>
 #include <Adafruit_VS1053.h>
 
+#include "ID12LA.h"
+
 #define SHIELD_CS 7
 #define SHIELD_DCS 6
 #define CARDCS 4
 #define DREQ 3
+
+const int pin_rfid_rx = 8;
+const int pin_rfid_tx = 9; /* not connected, needed for SoftwareSerial */
 
 struct mapping_entry {
 	char tag[10];
@@ -105,6 +110,8 @@ static void config_dump(struct config *c)
 	}
 }
 
+static ID12LA rfid(pin_rfid_rx, pin_rfid_tx);
+
 void setup() {
 	File f;
 
@@ -116,7 +123,6 @@ void setup() {
 	SD.begin(CARDCS);
 
 	player.setVolume(60, 60);
-	player.useInterrupt(VS1053_FILEPLAYER_PIN_INT);
 	player.playFullFile((char *)"startup.mp3");
 
 	f = SD.open("mapping.txt", FILE_READ);
@@ -126,7 +132,32 @@ void setup() {
 	}
 
 	config_dump(&config);
+
+	rfid.setup();
 }
 
 void loop() {
+	char *tag = NULL;
+
+	if (rfid.update()) {
+		tag = rfid.get();
+		p("[!] new tag: %.10s", tag);
+	}
+
+	if (tag)
+	{
+		struct mapping_entry *e = config.mapping;
+
+		while (*e->tag != 0) {
+			p("[*] checking %.10s", e->tag);
+			if (memcmp(tag, e->tag, 10) == 0) {
+				p("[*] start playing %s", e->track);
+				player.startPlayingFile(e->track);
+				break;
+			}
+			e++;
+		}
+	}
+
+	player.feedBuffer();
 }
