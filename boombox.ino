@@ -145,7 +145,7 @@ void setup() {
 	SD.begin(CARDCS);
 
 	player.setVolume(50, 50);
-	player.playFullFile((char *)"startup.mp3");
+	player.playFullFile((char *)"_sys/startup.mp3");
 
 	rfid_serial.begin(9600);
 	rfid.setup(&rfid_serial);
@@ -165,7 +165,7 @@ void loop() {
 		struct mapping_entry e;
 		bool ok;
 
-		ok = mapping_find(&e, "mapping.txt", tag);
+		ok = mapping_find(&e, "_sys/mapping.txt", tag);
 		if (ok) {
 			p("[*] start playing %s", e.track);
 			playing_track = true;
