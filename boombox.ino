@@ -20,12 +20,6 @@ struct mapping_entry {
 	char track[13];
 };
 
-struct config {
-	struct mapping_entry mapping[5];
-};
-
-static struct config config;
-
 static Adafruit_VS1053_FilePlayer player =
 	Adafruit_VS1053_FilePlayer(SHIELD_CS, SHIELD_DCS, DREQ, CARDCS);
 
@@ -52,63 +46,81 @@ static void hexdump(const void *p, size_t size)
 	Serial.println("--- >8 snap ----");
 }
 
+static bool mapping_readentry(struct mapping_entry *e, File *file)
+{
+	char *tag = e->tag;
+	char *track = e->track;
+	unsigned i;
+	char c;
+
+	memset(e, 0, sizeof(*e));
+
+	for (i = 0; i < sizeof(e->tag); i++) {
+		c = file->read();
+		if (c == -1)
+			return false;
+
+		*tag++ = c;
+	}
+
+	c = file->read();
+	if (c != ' ')
+		return false;
+
+	for (i = 0; i < sizeof(e->track) - 1; i++) {
+		c = file->peek();
+		if (c == '\n' || c == -1)
+			break;
+
+		*track++ = file->read();
+	}
+
+	/* sanity check track */
+	if (e->track[0] == 0)
+		return false;
+
+	/* swallow until newline/end */
+	do {
+		c = file->read();
+	} while (c != '\n' && c != -1);
+
+	return true;
+}
+
 static void mapping_read(struct mapping_entry *mapping, File *file, unsigned max_mappings)
 {
 	struct mapping_entry e;
-	unsigned i, cnt;
+	unsigned cnt;
+	bool ok;
 
 	for (cnt = 0; cnt < max_mappings; cnt++) {
-		char *tag = e.tag;
-		char *track = e.track;
-		char c;
-
-		memset(&e, 0, sizeof(e));
-
-		for (i = 0; i < sizeof(e.tag); i++) {
-			c = file->read();
-			if (c == -1)
-				return;
-
-			*tag++ = c;
-		}
-
-		c = file->read();
-		if (c != ' ')
-			return;
-
-		for (i = 0; i < sizeof(e.track) - 1; i++) {
-			c = file->peek();
-			if (c == '\n' || c == -1)
-				break;
-
-			*track++ = file->read();
-		}
-
-		/* sanity check track */
-		if (e.track[0] == 0)
+		ok = mapping_readentry(&e, file);
+		if (!ok)
 			return;
 
 		*mapping++ = e;
-
-		/* swallow until newline */
-		do {
-			c = file->read();
-		} while (c != '\n' && c != -1);
 	}
 }
 
-static void config_dump(struct config *c)
+static bool mapping_find(struct mapping_entry *e, const char *fname, const char *tag)
 {
-	struct mapping_entry *map_e = c->mapping;
-	int i;
+	bool ret = false;
+	File file;
 
-	Serial.println("[*] mappings:");
-	i = 0;
-	while (*map_e->tag != 0) {
-		p("[%d] %.10s -> %s", i, map_e->tag, map_e->track);
-		map_e++;
-		i++;
+	file = SD.open(fname, FILE_READ);
+	if (!file)
+		return false;
+
+	while (mapping_readentry(e, &file)) {
+		p("[*] checking %.10s (%s)", e->tag, e->track);
+		if (memcmp(e->tag, tag, sizeof(e->tag)) == 0) {
+			ret = true;
+			break;
+		}
 	}
+
+	file.close();
+	return ret;
 }
 
 static SoftwareSerial rfid_serial(pin_rfid_rx, pin_rfid_tx);
@@ -128,13 +140,6 @@ void setup() {
 	player.setVolume(60, 60);
 	player.playFullFile((char *)"startup.mp3");
 
-	f = SD.open("mapping.txt", FILE_READ);
-	if (f) {
-		mapping_read(config.mapping, &f, 5);
-		f.close();
-	}
-
-	config_dump(&config);
 
 	rfid_serial.begin(9600);
 	rfid.setup(&rfid_serial);
@@ -148,18 +153,16 @@ void loop() {
 		p("[!] new tag: %.10s", tag);
 	}
 
-	if (tag)
-	{
-		struct mapping_entry *e = config.mapping;
+	if (tag) {
+		struct mapping_entry e;
+		bool ok;
 
-		while (*e->tag != 0) {
-			p("[*] checking %.10s", e->tag);
-			if (memcmp(tag, e->tag, 10) == 0) {
-				p("[*] start playing %s", e->track);
-				player.startPlayingFile(e->track);
-				break;
-			}
-			e++;
+		ok = mapping_find(&e, "mapping.txt", tag);
+		if (ok) {
+			p("[*] start playing %s", e.track);
+			ok = player.startPlayingFile(e.track);
+			if (!ok)
+				p("WTF!");
 		}
 	}
 
