@@ -1,9 +1,8 @@
 #include <Arduino.h>
-#include <SoftwareSerial.h>
 #include "ID12LA.h"
 
-ID12LA::ID12LA(unsigned rx, unsigned tx) :
-  serial_(rx, tx)
+ID12LA::ID12LA() :
+  serial_(NULL)
 {
 }
 
@@ -11,17 +10,17 @@ ID12LA::~ID12LA()
 {
 }
 
-void ID12LA::setup()
+void ID12LA::setup(Stream *s)
 {
-	serial_.begin(9600);
+	serial_ = s;
 }
 
 bool ID12LA::update()
 {
 	bool updated = false;
 
-	while (serial_.available()) {
-		char c = serial_.read();
+	while (serial_->available()) {
+		char c = serial_->read();
 
 		/* start of tag */
 		if (c == 0x02) {
@@ -67,7 +66,7 @@ bool ID12LA::crc_ok()
 {
 	byte chk_ref = hexchar(buf_[10]) * 16 + hexchar(buf_[11]);
 	byte chk = 0;
-  
+
 	for (int i = 0; i < 5; i++) {
 		char *hex = &buf_[i*2];
 		byte data = hexchar(hex[0]) * 16 + hexchar(hex[1]);

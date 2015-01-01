@@ -1,15 +1,15 @@
 #ifndef __ID12LA_H
 #define __ID12LA_H
 
-#include <SoftwareSerial.h>
+#include <Stream.h>
 
 class ID12LA
 {
 public:
-	ID12LA(unsigned rx, unsigned tx);
+	ID12LA();
 	~ID12LA();
 
-	void setup();
+	void setup(Stream *s);
 
 	bool update();
 	char *get();
@@ -20,7 +20,7 @@ private:
 	int hexchar(char c);
 
 private:
-	SoftwareSerial serial_;
+	Stream *serial_;
 	char tag_[10];
 	char buf_[12];
 	unsigned index_;

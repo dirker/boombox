@@ -4,6 +4,7 @@
 #include <SD.h>
 #include <Adafruit_VS1053.h>
 
+#include <SoftwareSerial.h>
 #include "ID12LA.h"
 
 #define SHIELD_CS 7
@@ -110,7 +111,9 @@ static void config_dump(struct config *c)
 	}
 }
 
-static ID12LA rfid(pin_rfid_rx, pin_rfid_tx);
+static SoftwareSerial rfid_serial(pin_rfid_rx, pin_rfid_tx);
+static ID12LA rfid;
+
 
 void setup() {
 	File f;
@@ -133,7 +136,8 @@ void setup() {
 
 	config_dump(&config);
 
-	rfid.setup();
+	rfid_serial.begin(9600);
+	rfid.setup(&rfid_serial);
 }
 
 void loop() {
