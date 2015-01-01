@@ -165,6 +165,13 @@ void loop() {
 		struct mapping_entry e;
 		bool ok;
 
+		p("[*] stopping");
+		player.stopPlaying();
+		delay(100);
+		p("[*] play newtag");
+		player.playFullFile((char *)"_sys/newtag.mp3");
+		delay(1000);
+
 		ok = mapping_find(&e, "_sys/mapping.txt", tag);
 		if (ok) {
 			p("[*] start playing %s", e.track);
