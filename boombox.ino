@@ -14,6 +14,7 @@
 
 const int pin_rfid_rx = 8;
 const int pin_rfid_tx = 9; /* not connected, needed for SoftwareSerial */
+const int pin_power = 10;
 
 struct mapping_entry {
 	char tag[10];
@@ -130,6 +131,11 @@ static ID12LA rfid;
 void setup() {
 	File f;
 
+	pinMode(pin_power, OUTPUT);
+	digitalWrite(pin_power, HIGH);
+
+	pinMode(pin_pause, INPUT);
+
 	Serial.begin(57600);
 	Serial.println();
 	Serial.println();
@@ -144,6 +150,8 @@ void setup() {
 	rfid_serial.begin(9600);
 	rfid.setup(&rfid_serial);
 }
+
+static bool playing_track = false;
 
 void loop() {
 	char *tag = NULL;
@@ -160,6 +168,7 @@ void loop() {
 		ok = mapping_find(&e, "mapping.txt", tag);
 		if (ok) {
 			p("[*] start playing %s", e.track);
+			playing_track = true;
 			ok = player.startPlayingFile(e.track);
 			if (!ok)
 				p("WTF!");
@@ -167,4 +176,12 @@ void loop() {
 	}
 
 	player.feedBuffer();
+
+	/* shutdown if sitting idle for too long */
+	if (millis() > 30000 && !playing_track)
+		digitalWrite(pin_power, LOW);
+
+	/* shutdown if finished playing */
+	if (playing_track && !player.playingMusic)
+		digitalWrite(pin_power, LOW);
 }
