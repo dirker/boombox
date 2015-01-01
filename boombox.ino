@@ -141,11 +141,11 @@ void setup() {
 	Serial.println();
 
 	player.begin();
+
 	SD.begin(CARDCS);
 
-	player.setVolume(60, 60);
+	player.setVolume(50, 50);
 	player.playFullFile((char *)"startup.mp3");
-
 
 	rfid_serial.begin(9600);
 	rfid.setup(&rfid_serial);
